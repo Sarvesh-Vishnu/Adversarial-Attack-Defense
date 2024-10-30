@@ -10,7 +10,7 @@ This project is an interactive application built with Streamlit to showcase the 
 - **Grad-CAM Visualizations**: Visualize the model's focus areas before and after the attack to understand how adversarial perturbations influence CNN predictions.
 - **Educational Content**: Learn about adversarial vulnerabilities, attack mechanisms, and defense strategies.
 
-For detailed documentation, technical explanations, and future enhancement ideas, please refer to the [Notion Documentation]((https://tinyurl.com/AdversarialAttack-Defense)).
+For detailed documentation, technical explanations, and future enhancement ideas, please refer to the [Notion Documentation](https://tinyurl.com/AdversarialAttack-Defense)
 
 ---
 
