@@ -60,37 +60,29 @@ def create_pgd_adversarial_image(model, image, label, epsilon=0.01, alpha=0.002,
 #         print("Gradients were None.")
 #         return np.zeros((image.shape[1], image.shape[2]))  # Return a blank heatmap if no gradients were found
 
-def grad_cam(model, image, class_idx, layer_name=None):
-    # Check or set the target layer
-    if layer_name is None:
-        # Find the last convolutional layer if layer_name is not specified
-        layer_name = [layer.name for layer in model.layers if 'conv' in layer.name][-1]
-    print(f"Using layer: {layer_name}")
+def grad_cam(model, image, class_idx, layer_name="conv_layer_you_intend_to_use"):
+    try:
+        grad_model = tf.keras.models.Model([model.inputs], [model.get_layer(layer_name).output, model.output])
 
-    # Create a model that outputs the specified layer and the final predictions
-    grad_model = tf.keras.models.Model([model.inputs], [model.get_layer(layer_name).output, model.output])
+        # Ensure image has correct batch dimension
+        if image.shape != (1, 32, 32, 3):
+            image = np.expand_dims(image, axis=0)
 
-    # Ensure image has correct batch dimension
-    if image.shape != (1, 32, 32, 3):
-        image = np.expand_dims(image, axis=0)
+        with tf.GradientTape() as tape:
+            inputs = tf.cast(image, tf.float32)
+            conv_outputs, predictions = grad_model(inputs)
+            loss = predictions[:, class_idx]
 
-    # Gradient tape for capturing gradients
-    with tf.GradientTape() as tape:
-        inputs = tf.cast(image, tf.float32)
-        (conv_outputs, predictions) = grad_model(inputs)
-        loss = predictions[:, class_idx]
-
-    # Compute the gradient of the loss with respect to the layer outputs
-    grads = tape.gradient(loss, conv_outputs)
-    
-    if grads is not None:
-        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
-        conv_outputs = conv_outputs[0]  # Remove batch dimension
-
-        # Generate heatmap
-        heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
-        heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-6)
-        return heatmap.numpy()
-    else:
-        print("Warning: Gradients were None.")
-        return np.zeros((image.shape[1], image.shape[2]))  # Return blank heatmap if no gradients
+        grads = tape.gradient(loss, conv_outputs)
+        if grads is not None:
+            pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+            conv_outputs = conv_outputs[0]
+            heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
+            heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-6)
+            return heatmap.numpy()
+        else:
+            print("Warning: Gradients were None.")
+            return np.zeros((image.shape[1], image.shape[2]))  # Return blank heatmap if no gradients
+    except Exception as e:
+        print(f"Error in Grad-CAM: {str(e)}")
+        return np.zeros((image.shape[1], image.shape[2]))  # Return blank heatmap if exception occurs
