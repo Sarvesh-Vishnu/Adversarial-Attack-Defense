@@ -7,6 +7,8 @@ from tensorflow.keras.models import load_model
 import os
 from utils.attacks import create_fgsm_adversarial_image, create_pgd_adversarial_image, grad_cam
 
+tf.config.run_functions_eagerly(True)
+
 # Define CIFAR-100 class names
 class_names = [
     "apple", "aquarium_fish", "baby", "bear", "beaver", "bed", "bee", "beetle", "bicycle", "bottle",
