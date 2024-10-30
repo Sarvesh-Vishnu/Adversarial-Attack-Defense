@@ -190,7 +190,7 @@ if 'image' in locals():
                  This vulnerability arises from the model's reliance on specific features in the data rather than holistic understanding, making it sensitive to small, targeted perturbations.
              """)
 
-        Grad-CAM Visualizations
+        #Grad-CAM Visualizations
         st.write("### Grad-CAM Visualization")
         st.markdown("""
             The Grad-CAM visualization highlights areas in the image that the model considers important for its prediction.
