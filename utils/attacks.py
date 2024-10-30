@@ -17,49 +17,22 @@ def create_fgsm_adversarial_image(model, image, label, epsilon=0.01):
 
 
 # PGD Attack
-def create_pgd_adversarial_image(model, image, label, epsilon, alpha, num_iter):
-    try:
-        adv_image = tf.identity(image)
-        for i in range(num_iter):
-            with tf.GradientTape() as tape:
-                tape.watch(adv_image)
-                prediction = model(adv_image)
-                loss = tf.keras.losses.sparse_categorical_crossentropy(label, prediction)
+def create_pgd_adversarial_image(model, image, label, epsilon=0.01, alpha=0.002, num_iter=10):
+    image_tensor = tf.convert_to_tensor(image.reshape((1, 32, 32, 3)), dtype=tf.float32)
+    adv_image = image_tensor
 
-            # Ensure gradients are calculated correctly
-            gradients = tape.gradient(loss, adv_image)
-            if gradients is not None:
-                print(f"Iteration {i}: Gradients calculated")
-            else:
-                print(f"Iteration {i}: Gradients were None")
+    for _ in range(num_iter):
+        with tf.GradientTape() as tape:
+            tape.watch(adv_image)
+            prediction = model(adv_image)
+            loss = tf.keras.losses.sparse_categorical_crossentropy([label], prediction)
 
-            # Update adversarial image
-            adv_image = adv_image + alpha * tf.sign(gradients)
-            perturbation = tf.clip_by_value(adv_image - image, -epsilon, epsilon)
-            adv_image = tf.clip_by_value(image + perturbation, 0, 1)
-        return adv_image.numpy()
-    except Exception as e:
-        print(f"Error in PGD Attack: {str(e)}")
-        return image
+        gradient = tape.gradient(loss, adv_image)
+        adv_image = adv_image + alpha * tf.sign(gradient)
+        perturbation = tf.clip_by_value(adv_image - image_tensor, -epsilon, epsilon)
+        adv_image = tf.clip_by_value(image_tensor + perturbation, 0, 1)
 
-
-
-# def create_pgd_adversarial_image(model, image, label, epsilon=0.01, alpha=0.002, num_iter=10):
-#     image_tensor = tf.convert_to_tensor(image.reshape((1, 32, 32, 3)), dtype=tf.float32)
-#     adv_image = image_tensor
-
-#     for _ in range(num_iter):
-#         with tf.GradientTape() as tape:
-#             tape.watch(adv_image)
-#             prediction = model(adv_image)
-#             loss = tf.keras.losses.sparse_categorical_crossentropy([label], prediction)
-
-#         gradient = tape.gradient(loss, adv_image)
-#         adv_image = adv_image + alpha * tf.sign(gradient)
-#         perturbation = tf.clip_by_value(adv_image - image_tensor, -epsilon, epsilon)
-#         adv_image = tf.clip_by_value(image_tensor + perturbation, 0, 1)
-
-#     return adv_image.numpy().squeeze()
+    return adv_image.numpy().squeeze()
 
 
 
