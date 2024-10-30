@@ -1,6 +1,7 @@
 # utils/attacks.py
 import tensorflow as tf
 import numpy as np
+tf.config.run_functions_eagerly(True)
 
 # FGSM Attack
 def create_fgsm_adversarial_image(model, image, label, epsilon=0.01):
@@ -60,34 +61,36 @@ def create_pgd_adversarial_image(model, image, label, epsilon=0.01, alpha=0.002,
 #         return np.zeros((image.shape[1], image.shape[2]))  # Return a blank heatmap if no gradients were found
 
 def grad_cam(model, image, class_idx, layer_name=None):
-    # Check or determine layer name
+    # Check or set the target layer
     if layer_name is None:
         # Find the last convolutional layer if layer_name is not specified
         layer_name = [layer.name for layer in model.layers if 'conv' in layer.name][-1]
     print(f"Using layer: {layer_name}")
 
-    # Create a sub-model that maps the input to the desired layer output and the predictions
+    # Create a model that outputs the specified layer and the final predictions
     grad_model = tf.keras.models.Model([model.inputs], [model.get_layer(layer_name).output, model.output])
 
-    # Ensure image has the correct shape (add batch dimension if necessary)
+    # Ensure image has correct batch dimension
     if image.shape != (1, 32, 32, 3):
-        image = np.expand_dims(image, axis=0)  # Add batch dimension
+        image = np.expand_dims(image, axis=0)
 
+    # Gradient tape for capturing gradients
     with tf.GradientTape() as tape:
         inputs = tf.cast(image, tf.float32)
         (conv_outputs, predictions) = grad_model(inputs)
-        loss = predictions[:, class_idx]  # Target class loss
+        loss = predictions[:, class_idx]
 
-    # Compute gradients with respect to conv_outputs
+    # Compute the gradient of the loss with respect to the layer outputs
     grads = tape.gradient(loss, conv_outputs)
-    if grads is not None:  # Check if gradients are not None
-        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))  # Global average pooling
-        conv_outputs = conv_outputs[0]  # Remove batch dimension from conv_outputs
+    
+    if grads is not None:
+        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+        conv_outputs = conv_outputs[0]  # Remove batch dimension
 
-        # Create heatmap by combining pooled gradients with conv_outputs
+        # Generate heatmap
         heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
-        heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-6)  # Normalize heatmap
-        return heatmap.numpy()  # Return as a numpy array for easy plotting
+        heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-6)
+        return heatmap.numpy()
     else:
-        print("Gradients were None.")
-        return np.zeros((image.shape[1], image.shape[2]))  # Blank heatmap if no gradients
+        print("Warning: Gradients were None.")
+        return np.zeros((image.shape[1], image.shape[2]))  # Return blank heatmap if no gradients
