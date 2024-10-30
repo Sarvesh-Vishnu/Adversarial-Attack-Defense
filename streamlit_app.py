@@ -1,6 +1,7 @@
 # streamlit_app.py
 import streamlit as st
 import numpy as np
+import matplotlib.pyplot as plt
 import tensorflow as tf
 from PIL import Image
 from tensorflow.keras.models import load_model
