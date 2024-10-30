@@ -1,7 +1,6 @@
 # utils/attacks.py
 import tensorflow as tf
 import numpy as np
-tf.config.run_functions_eagerly(True)
 
 # FGSM Attack
 def create_fgsm_adversarial_image(model, image, label, epsilon=0.01):
@@ -16,23 +15,52 @@ def create_fgsm_adversarial_image(model, image, label, epsilon=0.01):
     adversarial_image = image_tensor + epsilon * signed_grad
     return tf.clip_by_value(adversarial_image, 0, 1).numpy().squeeze()
 
+
 # PGD Attack
-def create_pgd_adversarial_image(model, image, label, epsilon=0.01, alpha=0.002, num_iter=10):
-    image_tensor = tf.convert_to_tensor(image.reshape((1, 32, 32, 3)), dtype=tf.float32)
-    adv_image = image_tensor
+def create_pgd_adversarial_image(model, image, label, epsilon, alpha, num_iter):
+    try:
+        adv_image = tf.identity(image)
+        for i in range(num_iter):
+            with tf.GradientTape() as tape:
+                tape.watch(adv_image)
+                prediction = model(adv_image)
+                loss = tf.keras.losses.sparse_categorical_crossentropy(label, prediction)
 
-    for _ in range(num_iter):
-        with tf.GradientTape() as tape:
-            tape.watch(adv_image)
-            prediction = model(adv_image)
-            loss = tf.keras.losses.sparse_categorical_crossentropy([label], prediction)
+            # Compute gradients
+            gradients = tape.gradient(loss, adv_image)
+            if gradients is not None:
+                print(f"Iteration {i}: Gradients calculated")
+            else:
+                print(f"Iteration {i}: Gradients were None")
 
-        gradient = tape.gradient(loss, adv_image)
-        adv_image = adv_image + alpha * tf.sign(gradient)
-        perturbation = tf.clip_by_value(adv_image - image_tensor, -epsilon, epsilon)
-        adv_image = tf.clip_by_value(image_tensor + perturbation, 0, 1)
+            # Apply gradient step
+            adv_image = adv_image + alpha * tf.sign(gradients)
+            perturbation = tf.clip_by_value(adv_image - image, -epsilon, epsilon)
+            adv_image = tf.clip_by_value(image + perturbation, 0, 1)
+        return adv_image.numpy()
+    except Exception as e:
+        print(f"Error in PGD Attack: {str(e)}")
+        return image
 
-    return adv_image.numpy().squeeze()
+
+# def create_pgd_adversarial_image(model, image, label, epsilon=0.01, alpha=0.002, num_iter=10):
+#     image_tensor = tf.convert_to_tensor(image.reshape((1, 32, 32, 3)), dtype=tf.float32)
+#     adv_image = image_tensor
+
+#     for _ in range(num_iter):
+#         with tf.GradientTape() as tape:
+#             tape.watch(adv_image)
+#             prediction = model(adv_image)
+#             loss = tf.keras.losses.sparse_categorical_crossentropy([label], prediction)
+
+#         gradient = tape.gradient(loss, adv_image)
+#         adv_image = adv_image + alpha * tf.sign(gradient)
+#         perturbation = tf.clip_by_value(adv_image - image_tensor, -epsilon, epsilon)
+#         adv_image = tf.clip_by_value(image_tensor + perturbation, 0, 1)
+
+#     return adv_image.numpy().squeeze()
+
+
 
 
 # Grad-CAM Visualization
@@ -60,40 +88,34 @@ def create_pgd_adversarial_image(model, image, label, epsilon=0.01, alpha=0.002,
 #         print("Gradients were None.")
 #         return np.zeros((image.shape[1], image.shape[2]))  # Return a blank heatmap if no gradients were found
 
+
 def grad_cam(model, image, class_idx, layer_name="conv_layer_you_intend_to_use"):
     try:
-        # Build the model for Grad-CAM
+        # Build model to output activations and predictions
         grad_model = tf.keras.models.Model(
             inputs=[model.inputs], outputs=[model.get_layer(layer_name).output, model.output]
         )
 
-        # Ensure image has correct batch dimension
+        # Ensure correct batch dimension
         if image.shape != (1, 32, 32, 3):
             image = np.expand_dims(image, axis=0)
 
-        # Run gradient tape
         with tf.GradientTape() as tape:
             inputs = tf.cast(image, tf.float32)
             conv_outputs, predictions = grad_model(inputs)
             loss = predictions[:, class_idx]
 
-        # Compute the gradients of the loss with respect to conv_outputs
+        # Compute gradient of loss with respect to conv_outputs
         grads = tape.gradient(loss, conv_outputs)
         if grads is not None:
-            # Confirm gradients are not zero or empty
-            print("Gradients calculated:", grads.numpy())
             pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
-
-            # Scale conv_outputs by pooled_grads
             conv_outputs = conv_outputs[0]
             heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
-
-            # Normalize the heatmap to be in range [0, 1]
             heatmap = tf.maximum(heatmap, 0) / (tf.math.reduce_max(heatmap) + 1e-6)
             return heatmap.numpy()
         else:
             print("Warning: Gradients were None.")
-            return np.zeros((image.shape[1], image.shape[2]))  # Blank heatmap if no gradients
+            return np.zeros((image.shape[1], image.shape[2]))
     except Exception as e:
         print(f"Error in Grad-CAM: {str(e)}")
-        return np.zeros((image.shape[1], image.shape[2]))  # Blank heatmap if exception occurs
+        return np.zeros((image.shape[1], image.shape[2]))
