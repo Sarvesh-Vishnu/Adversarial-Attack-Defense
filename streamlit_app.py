@@ -24,6 +24,10 @@ class_names = [
 # Load the pre-trained model
 model = load_model("models/cifar100_model.h5")
 
+# Initialize the model by running a dummy input through it
+dummy_input = np.zeros((1, 32, 32, 3))  # Adjust the shape based on your model's expected input
+_ = model.predict(dummy_input)
+
 # Streamlit App Layout
 st.image("Header.png", use_column_width=True)
 #st.title("Adversarial Attacks and Defense")
