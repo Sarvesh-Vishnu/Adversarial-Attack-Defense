@@ -26,14 +26,14 @@ def create_pgd_adversarial_image(model, image, label, epsilon, alpha, num_iter):
                 prediction = model(adv_image)
                 loss = tf.keras.losses.sparse_categorical_crossentropy(label, prediction)
 
-            # Compute gradients
+            # Ensure gradients are calculated correctly
             gradients = tape.gradient(loss, adv_image)
             if gradients is not None:
                 print(f"Iteration {i}: Gradients calculated")
             else:
                 print(f"Iteration {i}: Gradients were None")
 
-            # Apply gradient step
+            # Update adversarial image
             adv_image = adv_image + alpha * tf.sign(gradients)
             perturbation = tf.clip_by_value(adv_image - image, -epsilon, epsilon)
             adv_image = tf.clip_by_value(image + perturbation, 0, 1)
@@ -41,6 +41,7 @@ def create_pgd_adversarial_image(model, image, label, epsilon, alpha, num_iter):
     except Exception as e:
         print(f"Error in PGD Attack: {str(e)}")
         return image
+
 
 
 # def create_pgd_adversarial_image(model, image, label, epsilon=0.01, alpha=0.002, num_iter=10):
