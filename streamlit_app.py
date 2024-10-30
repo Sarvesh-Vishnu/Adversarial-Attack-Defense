@@ -1,14 +1,11 @@
 # streamlit_app.py
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
 from PIL import Image
 from tensorflow.keras.models import load_model
 import os
 from utils.attacks import create_fgsm_adversarial_image, create_pgd_adversarial_image, grad_cam
-
-tf.config.run_functions_eagerly(True)
 
 # Define CIFAR-100 class names
 class_names = [
@@ -78,7 +75,7 @@ st.markdown("""
 4. **Adjust Attack Parameters**:
    - **Epsilon**: Strength of the perturbation. Higher values increase the attack's effectiveness but may make the changes more visible.
    - **Alpha** and **Iterations** (for PGD): Fine-tune the PGD attack with step size and iteration count.
-5. **Generate Adversarial Image**: View the model's predictions on the attacked image.
+5. **Generate Adversarial Image**: View the model's predictions on the attacked image and Grad-CAM visualizations.
 """)
 
 with st.expander("Detailed Explanations & Reasoning"):
@@ -100,7 +97,8 @@ with st.expander("Detailed Explanations & Reasoning"):
 
         Alpha and Iterations (for PGD): For PGD, adjust the step size (alpha) and the number of iterations to control the power and subtlety of the attack.
 
-        5. **Generate Adversarial Image**: Run the attack and observe the model’s predictions.
+        5. **Generate Adversarial Image**: Run the attack and observe the model’s predictions and Grad-CAM visualizations, 
+        which highlight the areas the model considers important before and after the attack.
     """)
 
 # Divider line
@@ -193,18 +191,18 @@ if 'image' in locals():
              """)
 
         # Grad-CAM Visualizations
-        # st.write("### Grad-CAM Visualization")
-        # st.markdown("""
-        #     The Grad-CAM visualization highlights areas in the image that the model considers important for its prediction.
-        #     Compare the Grad-CAM heatmaps of the original and adversarial images to see how the attack changes the model’s focus.
-        # """)
-        # # cam_original = grad_cam(model, image_np.reshape(1, 32, 32, 3), original_pred)
-        # cam_adv = grad_cam(model, adv_image.reshape(1, 32, 32, 3), adv_pred)
+        st.write("### Grad-CAM Visualization")
+        st.markdown("""
+            The Grad-CAM visualization highlights areas in the image that the model considers important for its prediction.
+            Compare the Grad-CAM heatmaps of the original and adversarial images to see how the attack changes the model’s focus.
+        """)
+        cam_original = grad_cam(model, image_np.reshape(1, 32, 32, 3), original_pred)
+        cam_adv = grad_cam(model, adv_image.reshape(1, 32, 32, 3), adv_pred)
 
-        # # Side-by-side display of Grad-CAM images
-        # col1, col2 = st.columns(2)
-        # col1.image(cam_original, caption="Grad-CAM on Original Image", use_column_width=True)
-        # col2.image(cam_adv, caption="Grad-CAM on Adversarial Image", use_column_width=True)
+        # Side-by-side display of Grad-CAM images
+        col1, col2 = st.columns(2)
+        col1.image(cam_original, caption="Grad-CAM on Original Image", use_column_width=True)
+        col2.image(cam_adv, caption="Grad-CAM on Adversarial Image", use_column_width=True)
 
         # Divider line
         st.markdown("---")
