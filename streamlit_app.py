@@ -78,7 +78,7 @@ st.markdown("""
 4. **Adjust Attack Parameters**:
    - **Epsilon**: Strength of the perturbation. Higher values increase the attack's effectiveness but may make the changes more visible.
    - **Alpha** and **Iterations** (for PGD): Fine-tune the PGD attack with step size and iteration count.
-5. **Generate Adversarial Image**: View the model's predictions on the attacked image and Grad-CAM visualizations.
+5. **Generate Adversarial Image**: View the model's predictions on the attacked image.
 """)
 
 with st.expander("Detailed Explanations & Reasoning"):
@@ -100,8 +100,7 @@ with st.expander("Detailed Explanations & Reasoning"):
 
         Alpha and Iterations (for PGD): For PGD, adjust the step size (alpha) and the number of iterations to control the power and subtlety of the attack.
 
-        5. **Generate Adversarial Image**: Run the attack and observe the model’s predictions and Grad-CAM visualizations, 
-        which highlight the areas the model considers important before and after the attack.
+        5. **Generate Adversarial Image**: Run the attack and observe the model’s predictions.
     """)
 
 # Divider line
@@ -194,37 +193,18 @@ if 'image' in locals():
              """)
 
         # Grad-CAM Visualizations
-        st.write("### Grad-CAM Visualization")
-        st.markdown("""
-            The Grad-CAM visualization highlights areas in the image that the model considers important for its prediction.
-            Compare the Grad-CAM heatmaps of the original and adversarial images to see how the attack changes the model’s focus.
-        """)
-        # cam_original = grad_cam(model, image_np.reshape(1, 32, 32, 3), original_pred)
+        # st.write("### Grad-CAM Visualization")
+        # st.markdown("""
+        #     The Grad-CAM visualization highlights areas in the image that the model considers important for its prediction.
+        #     Compare the Grad-CAM heatmaps of the original and adversarial images to see how the attack changes the model’s focus.
+        # """)
+        # # cam_original = grad_cam(model, image_np.reshape(1, 32, 32, 3), original_pred)
         # cam_adv = grad_cam(model, adv_image.reshape(1, 32, 32, 3), adv_pred)
 
         # # Side-by-side display of Grad-CAM images
         # col1, col2 = st.columns(2)
         # col1.image(cam_original, caption="Grad-CAM on Original Image", use_column_width=True)
         # col2.image(cam_adv, caption="Grad-CAM on Adversarial Image", use_column_width=True)
-
-        def convert_to_colormap(heatmap):
-            # Apply colormap and convert to RGB image
-            heatmap = np.uint8(255 * heatmap)  # Scale heatmap to 0-255
-            heatmap = plt.cm.jet(heatmap)[:, :, :3]  # Apply jet colormap (remove alpha channel)
-            return np.uint8(255 * heatmap)  # Convert to uint8 for display
-        
-        # Generate Grad-CAM heatmaps for original and adversarial images
-        cam_original = grad_cam(model, image_np.reshape(1, 32, 32, 3), original_pred)
-        cam_adv = grad_cam(model, adv_image.reshape(1, 32, 32, 3), adv_pred)
-        
-        # Convert heatmaps to RGB format for display
-        cam_original_rgb = convert_to_colormap(cam_original)
-        cam_adv_rgb = convert_to_colormap(cam_adv)
-        
-        # Display side-by-side in Streamlit
-        col1, col2 = st.columns(2)
-        col1.image(cam_original_rgb, caption="Grad-CAM on Original Image", use_column_width=True)
-        col2.image(cam_adv_rgb, caption="Grad-CAM on Adversarial Image", use_column_width=True)
 
         # Divider line
         st.markdown("---")
